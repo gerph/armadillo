@@ -60,7 +60,11 @@ struct ad_insn {
     int cc;
 };
 
+#if defined(__riscos) && !defined(__riscos64)
+#define AD_NONE (-1)
+#else
 static const int AD_NONE = -1;
+#endif
 
 enum {
     AD_OP_REG = 0, AD_OP_IMM, AD_OP_SHIFT, AD_OP_MEM
@@ -1130,7 +1134,7 @@ enum {
     AD_INSTR_XTN,
     AD_INSTR_XTN2,
     AD_INSTR_ZIP1,
-    AD_INSTR_ZIP2,
+    AD_INSTR_ZIP2
 };
 
 enum {
@@ -1618,7 +1622,7 @@ enum {
     AD_SYSREG_PMEVTYPER28_EL0 = 0xdf7c,
     AD_SYSREG_PMEVTYPER29_EL0 = 0xdf7d,
     AD_SYSREG_PMEVTYPER30_EL0 = 0xdf7e,
-    AD_SYSREG_PMEVTYPER31_EL0 = 0xdf7f,
+    AD_SYSREG_PMEVTYPER31_EL0 = 0xdf7f
 };
 
 #endif

@@ -4,10 +4,16 @@
 #include <string.h>
 
 static int _concat_internal(char **dst, const char *src, va_list args){
+    size_t srclen, dstlen;
+    va_list args1;
+    size_t total;
+    char *dst1;
+    int w;
+
     if(!src || !dst)
         return 0;
 
-    size_t srclen = strlen(src), dstlen = 0;
+    srclen = strlen(src), dstlen = 0;
 
     if(*dst)
         dstlen = strlen(*dst);
@@ -15,12 +21,13 @@ static int _concat_internal(char **dst, const char *src, va_list args){
     /* Back up args before it gets used. Client calls va_end
      * on the parameter themselves when calling vconcat.
      */
-    va_list args1;
+#ifndef __riscos
     va_copy(args1, args);
+#endif
 
-    size_t total = srclen + dstlen + vsnprintf(NULL, 0, src, args) + 1;
+    total = srclen + dstlen + vsnprintf(NULL, 0, src, args) + 1;
 
-    char *dst1 = malloc(total);
+    dst1 = malloc(total);
 
     if(!(*dst))
         *dst1 = '\0';
@@ -30,7 +37,7 @@ static int _concat_internal(char **dst, const char *src, va_list args){
         *dst = NULL;
     }
 
-    int w = vsnprintf(dst1 + dstlen, total, src, args1);
+    w = vsnprintf(dst1 + dstlen, total, src, args1);
 
     va_end(args1);
 
@@ -41,9 +48,10 @@ static int _concat_internal(char **dst, const char *src, va_list args){
 
 int concat(char **dst, const char *src, ...){
     va_list args;
+    int w;
     va_start(args, src);
 
-    int w = _concat_internal(dst, src, args);
+    w = _concat_internal(dst, src, args);
 
     va_end(args);
 

@@ -140,6 +140,12 @@ static int DisassembleLoadStoreMultStructuresInstr(struct instruction *i,
     unsigned Rt = bits(i->opcode, 0, 4);
 
     const char *T = get_arrangement(size, Q);
+    const char *instr_s;
+    int instr_id;
+    unsigned regcnt, selem;
+    int o;
+    const char *Rn_s;
+    const char *last_Rt_s;
 
     if(!T)
         return 1;
@@ -155,15 +161,13 @@ static int DisassembleLoadStoreMultStructuresInstr(struct instruction *i,
     ADD_FIELD(out, Rn);
     ADD_FIELD(out, Rt);
 
-    const char *instr_s = NULL;
-    int instr_id = AD_NONE;
+    instr_s = NULL;
+    instr_id = AD_NONE;
 
     if(L == 0)
         instr_s = "st";
     else
         instr_s = "ld";
-
-    unsigned regcnt, selem;
 
     switch(opcode){
         case 0: regcnt = 4; selem = 4; break;
@@ -184,27 +188,29 @@ static int DisassembleLoadStoreMultStructuresInstr(struct instruction *i,
 
     concat(&DECODE_STR(out), "%s%d { ", instr_s, selem);
 
-    for(int i=Rt; i<(Rt+regcnt)-1; i++){
-        ADD_REG_OPERAND(out, i, _SZ(_128_BIT), NO_PREFER_ZR, _SYSREG(AD_NONE), _RTBL(AD_RTBL_FP_V_128));
-        const char *Ri_s = GET_FP_REG(AD_RTBL_FP_V_128, i);
+    for(o=Rt; o<(Rt+regcnt)-1; i++){
+        const char *Ri_s;
+        ADD_REG_OPERAND(out, o, _SZ(_128_BIT), NO_PREFER_ZR, _SYSREG(AD_NONE), _RTBL(AD_RTBL_FP_V_128));
+        Ri_s = GET_FP_REG(AD_RTBL_FP_V_128, o);
 
         concat(&DECODE_STR(out), "%s.%s, ", Ri_s, T);
     }
 
     ADD_REG_OPERAND(out, (Rt+regcnt)-1, _SZ(_128_BIT), NO_PREFER_ZR, _SYSREG(AD_NONE),
             _RTBL(AD_RTBL_FP_V_128));
-    const char *last_Rt_s = GET_FP_REG(AD_RTBL_FP_V_128, (Rt+regcnt)-1);
+    last_Rt_s = GET_FP_REG(AD_RTBL_FP_V_128, (Rt+regcnt)-1);
 
     ADD_REG_OPERAND(out, Rn, _SZ(_64_BIT), NO_PREFER_ZR, _SYSREG(AD_NONE), _RTBL(AD_RTBL_GEN_64));
-    const char *Rn_s = GET_GEN_REG(AD_RTBL_GEN_64, Rn, NO_PREFER_ZR);
+    Rn_s = GET_GEN_REG(AD_RTBL_GEN_64, Rn, NO_PREFER_ZR);
 
     concat(&DECODE_STR(out), "%s.%s }, [%s]", last_Rt_s, T, Rn_s);
 
     if(postidxed){
         if(Rm != 0x1f){
+            const char *Rm_s;
             ADD_REG_OPERAND(out, Rm, _SZ(_64_BIT), NO_PREFER_ZR, _SYSREG(AD_NONE),
                     _RTBL(AD_RTBL_GEN_64));
-            const char *Rm_s = GET_GEN_REG(AD_RTBL_GEN_64, Rm, NO_PREFER_ZR);
+            Rm_s = GET_GEN_REG(AD_RTBL_GEN_64, Rm, NO_PREFER_ZR);
 
             concat(&DECODE_STR(out), ", %s", Rm_s);
         }
@@ -237,6 +243,8 @@ static int DisassembleLoadStoreSingleStructuresInstr(struct instruction *i,
     unsigned size = bits(i->opcode, 10, 11);
     unsigned Rn = bits(i->opcode, 5, 9);
     unsigned Rt = bits(i->opcode, 0, 4);
+    const char *instr_s = NULL;
+    int instr_id = AD_NONE;
 
     ADD_FIELD(out, Q);
     ADD_FIELD(out, L);
@@ -251,67 +259,91 @@ static int DisassembleLoadStoreSingleStructuresInstr(struct instruction *i,
     ADD_FIELD(out, Rn);
     ADD_FIELD(out, Rt);
 
-    const char *instr_s = NULL;
-    int instr_id = AD_NONE;
-
     if(L == 0)
         instr_s = "st";
     else
         instr_s = "ld";
 
-    const char *suffix = NULL;
+    {
+        const char *suffix = NULL;
 
-    unsigned scale = opcode >> 1;
-    unsigned selem = (((opcode & 1) << 1) | R) + 1;
-    unsigned index = 0;
+        unsigned scale = opcode >> 1;
+        unsigned selem = (((opcode & 1) << 1) | R) + 1;
+        unsigned index = 0;
+        int o;
 
-    int replicate = 0;
+        int replicate = 0;
+        static const int rimms[] = { 1, 2, 4, 8 };
+        const char *last_Rt_s;
+        const char *Rn_s;
 
-    switch(scale){
-        case 3: replicate = 1; break;
-        case 0:
-            {
-                index = (Q << 3) | (S << 2) | size;
-                suffix = "b";
-                break;
-            }
-        case 1:
-            {
-                index = (Q << 2) | (S << 1) | (size >> 1);
-                suffix = "h";
-                break;
-            }
-        case 2:
-            {
-                if((size & 1) == 0){
-                    index = (Q << 1) | S;
-                    suffix = "s";
+        switch(scale){
+            case 3: replicate = 1; break;
+            case 0:
+                {
+                    index = (Q << 3) | (S << 2) | size;
+                    suffix = "b";
+                    break;
                 }
-                else{
-                    index = Q;
-                    suffix = "d";
+            case 1:
+                {
+                    index = (Q << 2) | (S << 1) | (size >> 1);
+                    suffix = "h";
+                    break;
                 }
+            case 2:
+                {
+                    if((size & 1) == 0){
+                        index = (Q << 1) | S;
+                        suffix = "s";
+                    }
+                    else{
+                        index = Q;
+                        suffix = "d";
+                    }
 
-                break;
+                    break;
+                }
+            default: return 1;
+        };
+
+        if(replicate)
+            instr_id = (AD_INSTR_LD1R - 1) + ((selem * 2) - 1);
+        else if(L == 0)
+            instr_id = (AD_INSTR_ST1 - 1) + selem;
+        else if(L == 1)
+            instr_id = (AD_INSTR_LD1 - 1) + ((selem * 2) - 1);
+
+        concat(&DECODE_STR(out), "%s%d%s { ", instr_s, selem, replicate ? "r" : "");
+
+        for(o=Rt; o<(Rt+selem)-1; o++){
+            const char *Ri_s;
+            ADD_REG_OPERAND(out, o, _SZ(_128_BIT), NO_PREFER_ZR, _SYSREG(AD_NONE),
+                    _RTBL(AD_RTBL_FP_V_128));
+            Ri_s = GET_FP_REG(AD_RTBL_FP_V_128, o);
+
+            concat(&DECODE_STR(out), "%s", Ri_s);
+
+            if(replicate){
+                const char *T = get_arrangement(size, Q);
+
+                if(!T)
+                    return 1;
+
+                concat(&DECODE_STR(out), ".%s", T);
             }
-        default: return 1;
-    };
+            else{
+                concat(&DECODE_STR(out), ".%s", suffix);
+            }
 
-    if(replicate)
-        instr_id = (AD_INSTR_LD1R - 1) + ((selem * 2) - 1);
-    else if(L == 0)
-        instr_id = (AD_INSTR_ST1 - 1) + selem;
-    else if(L == 1)
-        instr_id = (AD_INSTR_LD1 - 1) + ((selem * 2) - 1);
+            concat(&DECODE_STR(out), ", ");
+        }
 
-    concat(&DECODE_STR(out), "%s%d%s { ", instr_s, selem, replicate ? "r" : "");
-
-    for(int i=Rt; i<(Rt+selem)-1; i++){
-        ADD_REG_OPERAND(out, i, _SZ(_128_BIT), NO_PREFER_ZR, _SYSREG(AD_NONE),
+        ADD_REG_OPERAND(out, (Rt+selem)-1, _SZ(_128_BIT), NO_PREFER_ZR, _SYSREG(AD_NONE),
                 _RTBL(AD_RTBL_FP_V_128));
-        const char *Ri_s = GET_FP_REG(AD_RTBL_FP_V_128, i);
+        last_Rt_s = GET_FP_REG(AD_RTBL_FP_V_128, (Rt+selem)-1);
 
-        concat(&DECODE_STR(out), "%s", Ri_s);
+        concat(&DECODE_STR(out), "%s", last_Rt_s);
 
         if(replicate){
             const char *T = get_arrangement(size, Q);
@@ -325,84 +357,65 @@ static int DisassembleLoadStoreSingleStructuresInstr(struct instruction *i,
             concat(&DECODE_STR(out), ".%s", suffix);
         }
 
-        concat(&DECODE_STR(out), ", ");
-    }
+        concat(&DECODE_STR(out), " }");
 
-    ADD_REG_OPERAND(out, (Rt+selem)-1, _SZ(_128_BIT), NO_PREFER_ZR, _SYSREG(AD_NONE),
-            _RTBL(AD_RTBL_FP_V_128));
-    const char *last_Rt_s = GET_FP_REG(AD_RTBL_FP_V_128, (Rt+selem)-1);
+        if(!replicate){
+            ADD_IMM_OPERAND(out, AD_IMM_UINT, *(unsigned int *)&index);
+            concat(&DECODE_STR(out), "[%d]", index);
+        }
 
-    concat(&DECODE_STR(out), "%s", last_Rt_s);
+        ADD_REG_OPERAND(out, Rn, _SZ(_64_BIT), NO_PREFER_ZR, _SYSREG(AD_NONE), _RTBL(AD_RTBL_GEN_64));
+        Rn_s = GET_GEN_REG(AD_RTBL_GEN_64, Rn, NO_PREFER_ZR);
 
-    if(replicate){
-        const char *T = get_arrangement(size, Q);
+        concat(&DECODE_STR(out), ", [%s]", Rn_s);
 
-        if(!T)
-            return 1;
+        if(postidxed){
+            if(replicate){
+                if(Rm != 0x1f){
+                    const char *Rm_s;
+                    ADD_REG_OPERAND(out, Rm, _SZ(_64_BIT), NO_PREFER_ZR, _SYSREG(AD_NONE),
+                            _RTBL(AD_RTBL_GEN_64));
+                    Rm_s = GET_GEN_REG(AD_RTBL_GEN_64, Rm, NO_PREFER_ZR);
 
-        concat(&DECODE_STR(out), ".%s", T);
-    }
-    else{
-        concat(&DECODE_STR(out), ".%s", suffix);
-    }
+                    concat(&DECODE_STR(out), ", %s", Rm_s);
+                }
+                else{
+                    unsigned imm = rimms[size] * selem;
+                    ADD_IMM_OPERAND(out, AD_IMM_UINT, *(unsigned int *)&imm);
 
-    concat(&DECODE_STR(out), " }");
-
-    if(!replicate){
-        ADD_IMM_OPERAND(out, AD_IMM_UINT, *(unsigned int *)&index);
-        concat(&DECODE_STR(out), "[%d]", index);
-    }
-
-    ADD_REG_OPERAND(out, Rn, _SZ(_64_BIT), NO_PREFER_ZR, _SYSREG(AD_NONE), _RTBL(AD_RTBL_GEN_64));
-    const char *Rn_s = GET_GEN_REG(AD_RTBL_GEN_64, Rn, NO_PREFER_ZR);
-
-    concat(&DECODE_STR(out), ", [%s]", Rn_s);
-
-    int rimms[] = { 1, 2, 4, 8 };
-
-    if(postidxed){
-        if(replicate){
-            if(Rm != 0x1f){
-                ADD_REG_OPERAND(out, Rm, _SZ(_64_BIT), NO_PREFER_ZR, _SYSREG(AD_NONE),
-                        _RTBL(AD_RTBL_GEN_64));
-                const char *Rm_s = GET_GEN_REG(AD_RTBL_GEN_64, Rm, NO_PREFER_ZR);
-
-                concat(&DECODE_STR(out), ", %s", Rm_s);
+                    concat(&DECODE_STR(out), ", #%#x", imm);
+                }
             }
             else{
-                unsigned imm = rimms[size] * selem;
-                ADD_IMM_OPERAND(out, AD_IMM_UINT, *(unsigned int *)&imm);
+                if(Rm != 0x1f){
+                    const char *Rm_s;
+                    ADD_REG_OPERAND(out, Rm, _SZ(_64_BIT), NO_PREFER_ZR, _SYSREG(AD_NONE),
+                            _RTBL(AD_RTBL_GEN_64));
+                    Rm_s = GET_GEN_REG(AD_RTBL_GEN_64, Rm, NO_PREFER_ZR);
 
-                concat(&DECODE_STR(out), ", #%#x", imm);
+                    concat(&DECODE_STR(out), ", %s", Rm_s);
+                }
+                else{
+                    int idx = 0;
+                    unsigned imm;
+
+                    if(*suffix == 'h')
+                        idx = 1;
+                    else if(*suffix == 's')
+                        idx = 2;
+                    else if(*suffix == 'd')
+                        idx = 3;
+
+                    imm = rimms[idx] * selem;
+                    ADD_IMM_OPERAND(out, AD_IMM_UINT, *(unsigned int *)&imm);
+
+                    concat(&DECODE_STR(out), ", #%#x", imm);
+                }
             }
         }
-        else{
-            if(Rm != 0x1f){
-                ADD_REG_OPERAND(out, Rm, _SZ(_64_BIT), NO_PREFER_ZR, _SYSREG(AD_NONE),
-                        _RTBL(AD_RTBL_GEN_64));
-                const char *Rm_s = GET_GEN_REG(AD_RTBL_GEN_64, Rm, NO_PREFER_ZR);
 
-                concat(&DECODE_STR(out), ", %s", Rm_s);
-            }
-            else{
-                int idx = 0;
-
-                if(*suffix == 'h')
-                    idx = 1;
-                else if(*suffix == 's')
-                    idx = 2;
-                else if(*suffix == 'd')
-                    idx = 3;
-
-                unsigned imm = rimms[idx] * selem;
-                ADD_IMM_OPERAND(out, AD_IMM_UINT, *(unsigned int *)&imm);
-
-                concat(&DECODE_STR(out), ", #%#x", imm);
-            }
-        }
+        SET_INSTR_ID(out, instr_id);
     }
-
-    SET_INSTR_ID(out, instr_id);
 
     return 0;
 }
@@ -414,6 +427,9 @@ static int DisassembleLoadStoreMemoryTagsInstr(struct instruction *i,
     unsigned op2 = bits(i->opcode, 10, 11);
     unsigned Rn = bits(i->opcode, 5, 9);
     unsigned Rt = bits(i->opcode, 0, 4);
+    int instr_id;
+    const char *Rn_s;
+    const char *Rt_s;
 
     if((opc == 2 || opc == 3) && imm9 != 0 && op2 == 0)
         return 1;
@@ -424,10 +440,10 @@ static int DisassembleLoadStoreMemoryTagsInstr(struct instruction *i,
     ADD_FIELD(out, Rn);
     ADD_FIELD(out, Rt);
 
-    int instr_id = AD_NONE;
+    instr_id = AD_NONE;
 
-    const char *Rn_s = GET_GEN_REG(AD_RTBL_GEN_64, Rn, NO_PREFER_ZR);
-    const char *Rt_s = GET_GEN_REG(AD_RTBL_GEN_64, Rt, NO_PREFER_ZR);
+    Rn_s = GET_GEN_REG(AD_RTBL_GEN_64, Rn, NO_PREFER_ZR);
+    Rt_s = GET_GEN_REG(AD_RTBL_GEN_64, Rt, NO_PREFER_ZR);
 
     if((opc == 0 || opc == 2 || opc == 3) && imm9 == 0 && op2 == 0){
         const char *instr_s = NULL;
@@ -540,6 +556,8 @@ static int DisassembleLoadAndStoreExclusiveInstr(struct instruction *i,
     unsigned Rt2 = bits(i->opcode, 10, 14);
     unsigned Rn = bits(i->opcode, 5, 9);
     unsigned Rt = bits(i->opcode, 0, 4);
+    unsigned encoding;
+    int instr_id;
 
     ADD_FIELD(out, size);
     ADD_FIELD(out, o2);
@@ -551,26 +569,33 @@ static int DisassembleLoadAndStoreExclusiveInstr(struct instruction *i,
     ADD_FIELD(out, Rn);
     ADD_FIELD(out, Rt);
 
-    unsigned encoding = (o2 << 3) | (L << 2) | (o1 << 1) | o0;
-    int instr_id = AD_NONE;
+    encoding = (o2 << 3) | (L << 2) | (o1 << 1) | o0;
+    instr_id = AD_NONE;
 
     if((size == 0 || size == 1) && (encoding == 2 || encoding == 3 ||
                 encoding == 6 || encoding == 7)){
         unsigned sz = size & 1;
         const char **registers = AD_RTBL_GEN_32;
+        int rsz;
+        const char *Rs_s;
+        const char *Rs1_s;
+        const char *Rt_s;
+        const char *Rt1_s;
+        const char *Rn_s;
+        const char *instr_s;
 
         if(sz == 1)
             registers = AD_RTBL_GEN_64;
 
-        int rsz = (registers == AD_RTBL_GEN_64 ? _64_BIT : _32_BIT);
+        rsz = (registers == AD_RTBL_GEN_64 ? _64_BIT : _32_BIT);
 
-        const char *Rs_s = GET_GEN_REG(registers, Rs, PREFER_ZR);
-        const char *Rs1_s = GET_GEN_REG(registers, Rs + 1, PREFER_ZR);
-        const char *Rt_s = GET_GEN_REG(registers, Rt, PREFER_ZR);
-        const char *Rt1_s = GET_GEN_REG(registers, Rt + 1, PREFER_ZR);
+        Rs_s = GET_GEN_REG(registers, Rs, PREFER_ZR);
+        Rs1_s = GET_GEN_REG(registers, Rs + 1, PREFER_ZR);
+        Rt_s = GET_GEN_REG(registers, Rt, PREFER_ZR);
+        Rt1_s = GET_GEN_REG(registers, Rt + 1, PREFER_ZR);
 
         /* always 64 bit */
-        const char *Rn_s = GET_GEN_REG(AD_RTBL_GEN_64, Rn, NO_PREFER_ZR);
+        Rn_s = GET_GEN_REG(AD_RTBL_GEN_64, Rn, NO_PREFER_ZR);
 
         ADD_REG_OPERAND(out, Rs, rsz, PREFER_ZR, _SYSREG(AD_NONE), _RTBL(registers));
         ADD_REG_OPERAND(out, Rs + 1, rsz, PREFER_ZR, _SYSREG(AD_NONE), _RTBL(registers));
@@ -580,7 +605,7 @@ static int DisassembleLoadAndStoreExclusiveInstr(struct instruction *i,
         ADD_REG_OPERAND(out, Rn, _SZ(_64_BIT), NO_PREFER_ZR, _SYSREG(AD_NONE),
                 _RTBL(AD_RTBL_GEN_64));
 
-        const char *instr_s = NULL;
+        instr_s = NULL;
 
         if(encoding == 2){
             instr_s = "casp";
@@ -606,22 +631,27 @@ static int DisassembleLoadAndStoreExclusiveInstr(struct instruction *i,
             (encoding == 10 || encoding == 11 || encoding == 14 || encoding == 15)){
         const char **Rs_Rt_Rtbl = AD_RTBL_GEN_32;
         unsigned Rs_Rt_Sz = _32_BIT;
+        const char *Rs_s;
+        const char *Rt_s;
+        const char *Rn_s;
+        const char *instr_s;
+        const char *suffix;
 
         if(size == 3){
             Rs_Rt_Rtbl = AD_RTBL_GEN_64;
             Rs_Rt_Sz = _64_BIT;
         }
 
-        const char *Rs_s = GET_GEN_REG(Rs_Rt_Rtbl, Rs, PREFER_ZR);
-        const char *Rt_s = GET_GEN_REG(Rs_Rt_Rtbl, Rt, PREFER_ZR);
-        const char *Rn_s = GET_GEN_REG(AD_RTBL_GEN_64, Rn, NO_PREFER_ZR);
+        Rs_s = GET_GEN_REG(Rs_Rt_Rtbl, Rs, PREFER_ZR);
+        Rt_s = GET_GEN_REG(Rs_Rt_Rtbl, Rt, PREFER_ZR);
+        Rn_s = GET_GEN_REG(AD_RTBL_GEN_64, Rn, NO_PREFER_ZR);
 
         ADD_REG_OPERAND(out, Rs, Rs_Rt_Sz, PREFER_ZR, _SYSREG(AD_NONE), Rs_Rt_Rtbl);
         ADD_REG_OPERAND(out, Rt, Rs_Rt_Sz, PREFER_ZR, _SYSREG(AD_NONE), Rs_Rt_Rtbl);
         ADD_REG_OPERAND(out, Rn, _SZ(_64_BIT), NO_PREFER_ZR, _SYSREG(AD_NONE),
                 _RTBL(AD_RTBL_GEN_64));
 
-        const char *instr_s = NULL;
+        instr_s = NULL;
 
         /* we'll figure out the suffixes and adjust insn ID later */
         if(encoding == 10){
@@ -641,7 +671,7 @@ static int DisassembleLoadAndStoreExclusiveInstr(struct instruction *i,
             instr_id = AD_INSTR_CASALB;
         }
 
-        const char *suffix = NULL; 
+        suffix = NULL;
 
         if(size == 0)
             suffix = "b";
@@ -688,6 +718,8 @@ static int DisassembleLoadAndStoreExclusiveInstr(struct instruction *i,
         };
 
         const char *instr_s = tab[encoding].instr_s;
+        const char *Rt_s;
+        const char *Rn_s;
 
         if(!instr_s)
             return 1;
@@ -713,8 +745,8 @@ static int DisassembleLoadAndStoreExclusiveInstr(struct instruction *i,
             concat(&DECODE_STR(out), "%s, ", Rs_s);
         }
 
-        const char *Rt_s = GET_GEN_REG(AD_RTBL_GEN_32, Rt, PREFER_ZR);
-        const char *Rn_s = GET_GEN_REG(AD_RTBL_GEN_64, Rn, NO_PREFER_ZR);
+        Rt_s = GET_GEN_REG(AD_RTBL_GEN_32, Rt, PREFER_ZR);
+        Rn_s = GET_GEN_REG(AD_RTBL_GEN_64, Rn, NO_PREFER_ZR);
 
         ADD_REG_OPERAND(out, Rt, _SZ(_32_BIT), NO_PREFER_ZR, _SYSREG(AD_NONE),
                 _RTBL(AD_RTBL_GEN_32));
@@ -742,23 +774,35 @@ static int DisassembleLoadAndStoreExclusiveInstr(struct instruction *i,
         };
 
         const char *instr_s = tab[encoding].instr_s;
+        const char *Rs_s;
+        const char **Rt_Rtbl;
+        unsigned Rt_Sz;
+        unsigned Rt1;
+        const char **Rt1_Rtbl;
+        unsigned Rt1_Sz;
+        const char **Rt2_Rtbl;
+        unsigned Rt2_Sz;
+        const char *Rt_s;
+        const char *Rt1_s;
+        const char *Rt2_s;
+        const char *Rn_s;
 
         if(!instr_s)
             return 1;
 
         instr_id = tab[encoding].instr_id;
 
-        const char *Rs_s = GET_GEN_REG(AD_RTBL_GEN_32, Rs, PREFER_ZR);
-        
-        const char **Rt_Rtbl = AD_RTBL_GEN_32;
-        unsigned Rt_Sz = _32_BIT;
+        Rs_s = GET_GEN_REG(AD_RTBL_GEN_32, Rs, PREFER_ZR);
 
-        unsigned Rt1 = Rt;
-        const char **Rt1_Rtbl = AD_RTBL_GEN_32;
-        unsigned Rt1_Sz = _32_BIT;
+        Rt_Rtbl = AD_RTBL_GEN_32;
+        Rt_Sz = _32_BIT;
 
-        const char **Rt2_Rtbl = AD_RTBL_GEN_32;
-        unsigned Rt2_Sz = _32_BIT;
+        Rt1 = Rt;
+        Rt1_Rtbl = AD_RTBL_GEN_32;
+        Rt1_Sz = _32_BIT;
+
+        Rt2_Rtbl = AD_RTBL_GEN_32;
+        Rt2_Sz = _32_BIT;
 
         if(size == 3){
             Rt_Rtbl = AD_RTBL_GEN_64;
@@ -771,10 +815,10 @@ static int DisassembleLoadAndStoreExclusiveInstr(struct instruction *i,
             Rt2_Sz = _64_BIT;
         }
 
-        const char *Rt_s = GET_GEN_REG(Rt_Rtbl, Rt, PREFER_ZR);
-        const char *Rt1_s = Rt_s;
-        const char *Rt2_s = GET_GEN_REG(Rt2_Rtbl, Rt2, PREFER_ZR);
-        const char *Rn_s = GET_GEN_REG(AD_RTBL_GEN_64, Rn, NO_PREFER_ZR);
+        Rt_s = GET_GEN_REG(Rt_Rtbl, Rt, PREFER_ZR);
+        Rt1_s = Rt_s;
+        Rt2_s = GET_GEN_REG(Rt2_Rtbl, Rt2, PREFER_ZR);
+        Rn_s = GET_GEN_REG(AD_RTBL_GEN_64, Rn, NO_PREFER_ZR);
 
         concat(&DECODE_STR(out), "%s ", instr_s);
 
@@ -823,6 +867,9 @@ static int DisassembleLDAPR_STLRInstr(struct instruction *i,
     unsigned imm9 = bits(i->opcode, 12, 20);
     unsigned Rn = bits(i->opcode, 5, 9);
     unsigned Rt = bits(i->opcode, 0, 4);
+    const char *instr_s = NULL;
+    int instr_id = AD_NONE;
+    const char *Rn_s;
 
     if(size == 2 && opc == 3)
         return 1;
@@ -836,14 +883,12 @@ static int DisassembleLDAPR_STLRInstr(struct instruction *i,
     ADD_FIELD(out, Rn);
     ADD_FIELD(out, Rt);
 
-    const char *instr_s = NULL;
-    int instr_id = AD_NONE;
-
     imm9 = sign_extend(imm9, 9);
 
-    const char *Rn_s = GET_GEN_REG(AD_RTBL_GEN_64, Rn, NO_PREFER_ZR);
+    Rn_s = GET_GEN_REG(AD_RTBL_GEN_64, Rn, NO_PREFER_ZR);
 
     if(size == 0){
+        const char *Rt_s;
         if(opc == 0){
             instr_s = "stlurb";
             instr_id = AD_INSTR_STLURB;
@@ -857,7 +902,7 @@ static int DisassembleLDAPR_STLRInstr(struct instruction *i,
             instr_id = AD_INSTR_LDAPURSB;
         }
 
-        const char *Rt_s = opc == 2 ?
+        Rt_s = opc == 2 ?
             GET_GEN_REG(AD_RTBL_GEN_64, Rt, PREFER_ZR) :
             GET_GEN_REG(AD_RTBL_GEN_32, Rt, PREFER_ZR);
 
@@ -868,6 +913,7 @@ static int DisassembleLDAPR_STLRInstr(struct instruction *i,
         concat(&DECODE_STR(out), "%s %s", instr_s, Rt_s);
     }
     else if(size == 1){
+        const char *Rt_s;
         if(opc == 0){
             instr_s = "stlurh";
             instr_id = AD_INSTR_STLURH;
@@ -881,7 +927,7 @@ static int DisassembleLDAPR_STLRInstr(struct instruction *i,
             instr_id = AD_INSTR_LDAPURSH;
         }
 
-        const char *Rt_s = opc == 2 ?
+        Rt_s = opc == 2 ?
             GET_GEN_REG(AD_RTBL_GEN_64, Rt, PREFER_ZR) :
             GET_GEN_REG(AD_RTBL_GEN_32, Rt, PREFER_ZR);
 
@@ -897,11 +943,12 @@ static int DisassembleLDAPR_STLRInstr(struct instruction *i,
             { "ldapur", AD_INSTR_LDAPUR },
             { "ldapursw", AD_INSTR_LDAPURSW },
         };
+        const char *Rt_s;
 
         instr_s = tab[opc].instr_s;
         instr_id = tab[opc].instr_id;
 
-        const char *Rt_s = opc > 1 ?
+        Rt_s = opc > 1 ?
             GET_GEN_REG(AD_RTBL_GEN_64, Rt, PREFER_ZR) :
             GET_GEN_REG(AD_RTBL_GEN_32, Rt, PREFER_ZR);
 
@@ -916,11 +963,12 @@ static int DisassembleLDAPR_STLRInstr(struct instruction *i,
             { "stlur", AD_INSTR_STLUR },
             { "ldapur", AD_INSTR_LDAPUR },
         };
+        const char *Rt_s;
 
         instr_s = tab[opc].instr_s;
         instr_id = tab[opc].instr_id;
 
-        const char *Rt_s = GET_GEN_REG(AD_RTBL_GEN_64, Rt, PREFER_ZR);
+        Rt_s = GET_GEN_REG(AD_RTBL_GEN_64, Rt, PREFER_ZR);
 
         ADD_REG_OPERAND(out, Rt, _SZ(_64_BIT), PREFER_ZR, _SYSREG(AD_NONE),
                 _RTBL(AD_RTBL_GEN_64));
@@ -952,6 +1000,9 @@ static int DisassembleLoadAndStoreLiteralInstr(struct instruction *i,
     unsigned V = bits(i->opcode, 26, 26);
     unsigned imm19 = bits(i->opcode, 5, 23);
     unsigned Rt = bits(i->opcode, 0, 4);
+    const char *instr_s = "ldr";
+    int instr_id = AD_INSTR_LDR;
+    long imm;
 
     if(opc == 3 && V == 1)
         return 1;
@@ -961,26 +1012,21 @@ static int DisassembleLoadAndStoreLiteralInstr(struct instruction *i,
     ADD_FIELD(out, imm19);
     ADD_FIELD(out, Rt);
 
-    const char *instr_s = "ldr";
-    int instr_id = AD_INSTR_LDR;
-
     imm19 = sign_extend((imm19 << 2), 21);
 
-    long imm = (signed)imm19 + i->PC;
+    imm = (signed)imm19 + i->PC;
 
     if(opc == 2 && V == 0){
+        const char *Rt_s;
         instr_s = "ldrsw";
         instr_id = AD_INSTR_LDRSW;
 
-        const char *Rt_s = GET_GEN_REG(AD_RTBL_GEN_64, Rt, NO_PREFER_ZR);
+        Rt_s = GET_GEN_REG(AD_RTBL_GEN_64, Rt, NO_PREFER_ZR);
         ADD_REG_OPERAND(out, Rt, _64_BIT, NO_PREFER_ZR, _SYSREG(AD_NONE), AD_RTBL_GEN_64);
 
         concat(&DECODE_STR(out), "%s %s, #"S_LX"", instr_s, Rt_s, S_LA(imm));
     }
     else if(opc == 3 && V == 0){
-        instr_s = "prfm";
-        instr_id = AD_INSTR_PRFM;
-
         unsigned type = bits(Rt, 3, 4);
         unsigned target = bits(Rt, 1, 2);
         unsigned policy = Rt & 1;
@@ -988,6 +1034,8 @@ static int DisassembleLoadAndStoreLiteralInstr(struct instruction *i,
         const char *types[] = { "PLD", "PLI", "PST" };
         const char *targets[] = { "L1", "L2", "L3" };
         const char *policies[] = { "KEEP", "STRM" };
+        instr_s = "prfm";
+        instr_id = AD_INSTR_PRFM;
 
         ADD_IMM_OPERAND(out, AD_IMM_UINT, *(unsigned int *)&Rt);
 
@@ -1045,6 +1093,14 @@ static int DisassembleLoadAndStoreRegisterPairInstr(struct instruction *i,
     unsigned Rt2 = bits(i->opcode, 10, 14);
     unsigned Rn = bits(i->opcode, 5, 9);
     unsigned Rt = bits(i->opcode, 0, 4);
+    int instr_id = AD_NONE;
+
+    const char *Rt2_s = NULL, *Rn_s = NULL, *Rt_s = NULL;
+
+    const char **registers = NULL;
+    unsigned sz = 0;
+    unsigned scale;
+    unsigned opco;
 
     if(opc == 3)
         return 1;
@@ -1056,13 +1112,6 @@ static int DisassembleLoadAndStoreRegisterPairInstr(struct instruction *i,
     ADD_FIELD(out, Rt2);
     ADD_FIELD(out, Rn);
     ADD_FIELD(out, Rt);
-
-    int instr_id = AD_NONE;
-
-    const char *Rt2_s = NULL, *Rn_s = NULL, *Rt_s = NULL;
-
-    const char **registers = NULL;
-    unsigned sz = 0;
 
     if(opc == 0){
         registers = V == 0 ? AD_RTBL_GEN_32 : AD_RTBL_FP_32;
@@ -1076,8 +1125,6 @@ static int DisassembleLoadAndStoreRegisterPairInstr(struct instruction *i,
         registers = V == 0 ? AD_RTBL_GEN_64 : AD_RTBL_FP_128;
         sz = V == 0 ? _64_BIT : _128_BIT;
     }
-
-    unsigned scale;
 
     if(V == 0){
         Rt2_s = GET_FP_REG(registers, Rt2);
@@ -1099,7 +1146,7 @@ static int DisassembleLoadAndStoreRegisterPairInstr(struct instruction *i,
     ADD_REG_OPERAND(out, Rn, _SZ(_64_BIT), NO_PREFER_ZR, _SYSREG(AD_NONE),
             AD_RTBL_GEN_64);
 
-    unsigned opco = (opc << 2) | (V << 1) | L;
+    opco = (opc << 2) | (V << 1) | L;
 
     /* start at AD_INSTR_(STP|LDP) and adjust as needed */
 
@@ -1166,6 +1213,15 @@ static int DisassembleLoadAndStoreRegisterInstr(struct instruction *i,
     unsigned imm9 = bits(i->opcode, 12, 20);
     unsigned Rn = bits(i->opcode, 5, 9);
     unsigned Rt = bits(i->opcode, 0, 4);
+    int instr_id = AD_NONE;
+
+    const char **registers = AD_RTBL_GEN_32;
+    unsigned sz = _32_BIT;
+    const char *Rt_s;
+    unsigned instr_idx;
+    struct itab *instr_tab = NULL;
+    const char *instr_s;
+    const char *Rn_s;
 
     ADD_FIELD(out, size);
     ADD_FIELD(out, V);
@@ -1174,12 +1230,7 @@ static int DisassembleLoadAndStoreRegisterInstr(struct instruction *i,
     ADD_FIELD(out, Rn);
     ADD_FIELD(out, Rt);
 
-    int instr_id = AD_NONE;
-
-    const char **registers = AD_RTBL_GEN_32;
-    unsigned sz = _32_BIT;
-
-    const char *Rt_s = GET_GEN_REG(registers, Rt, PREFER_ZR);
+    Rt_s = GET_GEN_REG(registers, Rt, PREFER_ZR);
 
     if(V == 0 && (opc == 2 || size == 3)){
         registers = AD_RTBL_GEN_64;
@@ -1214,8 +1265,7 @@ static int DisassembleLoadAndStoreRegisterInstr(struct instruction *i,
 
     ADD_REG_OPERAND(out, Rt, sz, PREFER_ZR, _SYSREG(AD_NONE), registers);
 
-    unsigned instr_idx = (size << 3) | (V << 2) | opc;
-    struct itab *instr_tab = NULL;
+    instr_idx = (size << 3) | (V << 2) | opc;
 
     if(kind == UNSIGNED_IMMEDIATE || kind == IMMEDIATE_POST_INDEXED ||
             kind == IMMEDIATE_PRE_INDEXED){
@@ -1240,14 +1290,14 @@ static int DisassembleLoadAndStoreRegisterInstr(struct instruction *i,
     if(!instr_tab)
         return 1;
 
-    const char *instr_s = instr_tab[instr_idx].instr_s;
+    instr_s = instr_tab[instr_idx].instr_s;
 
     if(!instr_s)
         return 1;
 
     instr_id = instr_tab[instr_idx].instr_id;
 
-    const char *Rn_s = GET_GEN_REG(AD_RTBL_GEN_64, Rn, NO_PREFER_ZR);
+    Rn_s = GET_GEN_REG(AD_RTBL_GEN_64, Rn, NO_PREFER_ZR);
     ADD_REG_OPERAND(out, Rn, _SZ(_64_BIT), NO_PREFER_ZR, _SYSREG(AD_NONE),
             AD_RTBL_GEN_64);
 
@@ -1287,6 +1337,7 @@ static int DisassembleLoadAndStoreRegisterInstr(struct instruction *i,
 
             int fp = V == 1;
             int shift = 0;
+            unsigned long pimm;
 
             if(fp)
                 shift = ((opc >> 1) << 2) | size;
@@ -1301,7 +1352,7 @@ static int DisassembleLoadAndStoreRegisterInstr(struct instruction *i,
                 shift = size;
             }
 
-            unsigned long pimm = imm12 << shift;
+            pimm = imm12 << shift;
 
             if(pimm != 0){
                 ADD_IMM_OPERAND(out, AD_IMM_ULONG, *(unsigned long *)&pimm);
@@ -1329,13 +1380,15 @@ static int get_atomic_memory_op(unsigned size, unsigned V, unsigned A,
         unsigned R, unsigned o3, unsigned opc, unsigned Rt, struct itab *instr,
         struct itab *alias){
     unsigned encoding = size << 7;
+    int use_alias;
+
     encoding |= V << 6;
     encoding |= A << 5;
     encoding |= R << 4;
     encoding |= o3 << 3;
     encoding |= opc;
 
-    int use_alias = (A == 0 && Rt == 0x1f);
+    use_alias = (A == 0 && Rt == 0x1f);
 
     switch(encoding){
         case 0x184:
@@ -2364,6 +2417,14 @@ static int DisassembleAtomicMemoryInstr(struct instruction *i,
     unsigned opc = bits(i->opcode, 12, 14);
     unsigned Rn = bits(i->opcode, 5, 9);
     unsigned Rt = bits(i->opcode, 0, 4);
+    const char **registers = AD_RTBL_GEN_32;
+    size_t sz = AD_RTBL_GEN_32_SZ;
+    const char *Rs_s;
+    const char *Rt_s;
+    const char *Rn_s;
+    struct itab instr = {0}, alias = {0};
+    int use_alias;
+    int instr_id = AD_NONE;
 
     ADD_FIELD(out, size);
     ADD_FIELD(out, V);
@@ -2378,23 +2439,16 @@ static int DisassembleAtomicMemoryInstr(struct instruction *i,
     if(V == 1)
         return 1;
 
-    const char **registers = AD_RTBL_GEN_32;
-    size_t sz = AD_RTBL_GEN_32_SZ;
-
     if(size > 2){
         registers = AD_RTBL_GEN_64;
         sz = AD_RTBL_GEN_64_SZ;
     }
 
-    const char *Rs_s = GET_GEN_REG(registers, Rs, PREFER_ZR);
-    const char *Rt_s = GET_GEN_REG(registers, Rt, PREFER_ZR);
-    const char *Rn_s = GET_GEN_REG(AD_RTBL_GEN_64, Rn, NO_PREFER_ZR);
+    Rs_s = GET_GEN_REG(registers, Rs, PREFER_ZR);
+    Rt_s = GET_GEN_REG(registers, Rt, PREFER_ZR);
+    Rn_s = GET_GEN_REG(AD_RTBL_GEN_64, Rn, NO_PREFER_ZR);
 
-    struct itab instr = {0}, alias = {0};
-
-    int use_alias = get_atomic_memory_op(size, V, A, R, o3, opc, Rt, &instr, &alias);
-
-    int instr_id = AD_NONE;
+    use_alias = get_atomic_memory_op(size, V, A, R, o3, opc, Rt, &instr, &alias);
 
     if(use_alias){
         if(!alias.instr_s)
@@ -2451,6 +2505,20 @@ static int DisassembleLoadAndStoreRegisterOffsetInstr(struct instruction *i,
     unsigned S = bits(i->opcode, 12, 12);
     unsigned Rn = bits(i->opcode, 5, 9);
     unsigned Rt = bits(i->opcode, 0, 4);
+    int instr_id = AD_NONE;
+    const char **registers = AD_RTBL_GEN_32;
+    size_t sz = _32_BIT;
+    
+    int fp = 0;
+    const char *Rt_s;
+    const char *Rn_s;
+    const char *Rm_s;
+
+    int Rm_sz = _64_BIT;
+    struct itab instr;
+    int extended;
+    const char *extend;
+    unsigned instr_idx;
 
     ADD_FIELD(out, size);
     ADD_FIELD(out, V);
@@ -2460,13 +2528,6 @@ static int DisassembleLoadAndStoreRegisterOffsetInstr(struct instruction *i,
     ADD_FIELD(out, S);
     ADD_FIELD(out, Rn);
     ADD_FIELD(out, Rt);
-
-    int instr_id = AD_NONE;
-
-    const char **registers = AD_RTBL_GEN_32;
-    size_t sz = _32_BIT;
-    
-    int fp = 0;
 
     if(V == 0 && (opc == 2 || size == 3)){
         registers = AD_RTBL_GEN_64;
@@ -2497,16 +2558,14 @@ static int DisassembleLoadAndStoreRegisterOffsetInstr(struct instruction *i,
         }
     }
 
-    const char *Rt_s = NULL;
-    const char *Rn_s = GET_GEN_REG(AD_RTBL_GEN_64, Rn, NO_PREFER_ZR);
-    const char *Rm_s = NULL;
+    Rt_s = NULL;
+    Rn_s = GET_GEN_REG(AD_RTBL_GEN_64, Rn, NO_PREFER_ZR);
+    Rm_s = NULL;
 
     if(fp)
         Rt_s = GET_FP_REG(registers, Rt);
     else
         Rt_s = GET_GEN_REG(registers, Rt, NO_PREFER_ZR);
-
-    int Rm_sz = _64_BIT;
 
     if(option & 1)
         Rm_s = GET_GEN_REG(AD_RTBL_GEN_64, Rm, PREFER_ZR);
@@ -2515,12 +2574,12 @@ static int DisassembleLoadAndStoreRegisterOffsetInstr(struct instruction *i,
         Rm_sz = _32_BIT;
     }
 
-    unsigned instr_idx = (size << 3) | (V << 2) |  opc;
+    instr_idx = (size << 3) | (V << 2) |  opc;
 
     if(OOB(instr_idx, pre_post_unsigned_register_idx_instr_tbl))
         return 1;
 
-    struct itab instr = pre_post_unsigned_register_idx_instr_tbl[instr_idx];
+    instr = pre_post_unsigned_register_idx_instr_tbl[instr_idx];
 
     instr_id = instr.instr_id;
 
@@ -2533,8 +2592,8 @@ static int DisassembleLoadAndStoreRegisterOffsetInstr(struct instruction *i,
     ADD_REG_OPERAND(out, Rm, Rm_sz, PREFER_ZR, _SYSREG(AD_NONE), Rm_sz == _32_BIT ?
             AD_RTBL_GEN_32 : AD_RTBL_GEN_64);
 
-    int extended = option != 3;
-    const char *extend = decode_reg_extend(option);
+    extended = option != 3;
+    extend = decode_reg_extend(option);
 
     if(instr_id == AD_INSTR_PRFM){
         unsigned type = bits(Rt, 3, 4);
@@ -2703,6 +2762,11 @@ static int DisassembleLoadAndStorePACInstr(struct instruction *i,
     unsigned W = bits(i->opcode, 11, 11);
     unsigned Rn = bits(i->opcode, 5, 9);
     unsigned Rt = bits(i->opcode, 0, 4);
+    int instr_id = AD_NONE;
+    const char *Rt_s;
+    const char *Rn_s;
+    int use_key_A = M == 0;
+    int simm;
 
     if(size != 3)
         return 1;
@@ -2719,16 +2783,13 @@ static int DisassembleLoadAndStorePACInstr(struct instruction *i,
     ADD_FIELD(out, Rn);
     ADD_FIELD(out, Rt);
 
-    int instr_id = AD_NONE;
-
-    const char *Rt_s = GET_GEN_REG(AD_RTBL_GEN_64, Rt, NO_PREFER_ZR);
-    const char *Rn_s = GET_GEN_REG(AD_RTBL_GEN_64, Rn, NO_PREFER_ZR);
+    Rt_s = GET_GEN_REG(AD_RTBL_GEN_64, Rt, NO_PREFER_ZR);
+    Rn_s = GET_GEN_REG(AD_RTBL_GEN_64, Rn, NO_PREFER_ZR);
 
     ADD_REG_OPERAND(out, Rt, _SZ(_64_BIT), NO_PREFER_ZR, _SYSREG(AD_NONE), AD_RTBL_GEN_64);
     ADD_REG_OPERAND(out, Rn, _SZ(_64_BIT), NO_PREFER_ZR, _SYSREG(AD_NONE), AD_RTBL_GEN_64);
 
-    int use_key_A = M == 0;
-    int simm = sign_extend((S << 9) | imm9, 10) << 3;
+    simm = sign_extend((S << 9) | imm9, 10) << 3;
 
     concat(&DECODE_STR(out), "ldr");
 

@@ -1,6 +1,10 @@
 #ifndef _COMMON_H_
 #define _COMMON_H_
 
+#if defined(__riscos) && !defined(__riscos64)
+#define inline /* Not supported in Norcroft's old version */
+#endif
+
 struct itab {
     const char *instr_s;
     int instr_id;

@@ -18,8 +18,9 @@ static unsigned long RORZeroExtendOnes(unsigned int M, unsigned int N,
 
 int HighestSetBit(unsigned int number, unsigned int n){
     int ret = -1;
+    int i;
 
-    for(int i = n-1; i>=0; i--){
+    for(i = n-1; i>=0; i--){
         if(number & (1 << i))
             return i;
     }
@@ -29,8 +30,9 @@ int HighestSetBit(unsigned int number, unsigned int n){
 
 int LowestSetBit(unsigned int number, unsigned int n){
     int ret = n;
+    int i;
 
-    for(int i=0; i<n; i++){
+    for(i=0; i<n; i++){
         if(number & (1 << i))
             return i;
     }
@@ -40,8 +42,9 @@ int LowestSetBit(unsigned int number, unsigned int n){
 
 int BitCount(unsigned X, unsigned N){
     int result = 0;
+    int i;
 
-    for(int i=0; i<N; i++){
+    for(i=0; i<N; i++){
         if(((X >> i) & 1) == 1)
             result++;
     }
@@ -50,10 +53,11 @@ int BitCount(unsigned X, unsigned N){
 }
 
 unsigned long Ones(int len, int N){
-    (void)N;
     unsigned long ret = 0;
+    int i;
+    (void)N;
 
-    for(int i=len-1; i>=0; i--)
+    for(i=len-1; i>=0; i--)
         ret |= ((unsigned long)1 << i);
 
     return ret;
@@ -63,18 +67,22 @@ int DecodeBitMasks(unsigned int N, unsigned int imms, unsigned int immr,
         int immediate, unsigned long *out){
     unsigned int num = (N << 6) | (~imms & 0x3f);
     unsigned int len = HighestSetBit(num, 7);
+    unsigned int levels;
+    unsigned int S;
+    unsigned int R;
+    unsigned int esize;
 
     if(len < 1)
         return -1;
 
-    unsigned int levels = Ones(len, 0);
+    levels = Ones(len, 0);
 
     if(immediate && ((imms & levels) == levels))
         return -1;
 
-    unsigned int S = imms & levels;
-    unsigned int R = immr & levels;
-    unsigned int esize = 1 << len;
+    S = imms & levels;
+    R = immr & levels;
+    esize = 1 << len;
 
     *out = replicate(RORZeroExtendOnes(S + 1, esize, R), sizeof(unsigned long) * CHAR_BIT, esize);
 
@@ -88,8 +96,9 @@ int DecodeBitMasks(unsigned int N, unsigned int imms, unsigned int immr,
  */
 unsigned long replicate(unsigned long num, int nbits, int cnt){
     unsigned long result = 0;
+    int i;
 
-    for(int i=0; i<cnt; i++){
+    for(i=0; i<cnt; i++){
         result <<= nbits;
         result |= num;
     }

@@ -27,6 +27,9 @@ OBJECT_FILES = $(SRCDIR)/armadillo.o \
 armadillo : $(OBJECT_FILES)
 	$(CC) $(CFLAGS) -dynamiclib -o libarmadillo.dylib $(OBJECT_FILES)
 
+example: armadillo example.c
+	$(CC) example.c -L. -larmadillo -o example
+
 driver85 : $(OBJECT_FILES) driver85.c linkedlist.c
 	$(MAKE) armadillo
 	$(CC) $(CFLAGS) -L. -larmadillo linkedlist.c driver85.c -o driver85

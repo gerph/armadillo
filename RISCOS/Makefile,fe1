@@ -1,0 +1,52 @@
+#!/usr/bin/env riscos-amu -f
+# Makefile for Armadillo
+#
+
+#
+# Program specific options:
+#
+COMPONENT  = Armadillo
+
+# Specifies additional targets for startup
+#INITTARGET = inittarget
+
+# Specifies additional targets for clean
+#CLEANTARGET = cleantarget
+
+# Files to export as part of export_hdr or export_libs
+# To export to the library in a subdirectory, use an export like:
+#   ${EXP_LIB}.${COMPONENT}.h.myheader
+EXPORTS    = ${EXP_LIB}.${COMPONENT}.h.armadillo \
+			 ${EXP_LIB}.${COMPONENT}.h.strext \
+
+# Comma-separated list of paths to use for includes, such as:
+#	C:LibName.
+INCLUDES   =
+
+# Space separated list of defines to set, eg -DDEBUG
+CDEFINES   =
+
+# Objects to build, using the format o.<name> (will be varied for build type)
+OBJS       = o.armadillo \
+             o.bits \
+             o.BranchExcSys \
+             o.DataProcessingFloatingPoint \
+             o.DataProcessingImmediate \
+             o.DataProcessingRegister \
+             o.instruction \
+             o.LoadsAndStores \
+             o.strext \
+             o.utils \
+
+include LibExport
+
+# Export rules
+# For any files you export with EXPORTS you may need to include an
+# export rule
+${EXP_LIB}.${COMPONENT}.h.armadillo: h.armadillo
+       ${CP} $?  $@  ${CPFLAGS}
+${EXP_LIB}.${COMPONENT}.h.strext: h.strext
+       ${CP} $?  $@  ${CPFLAGS}
+
+#---------------------------------------------------------------------------
+# Dynamic dependencies:
