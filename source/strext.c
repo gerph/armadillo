@@ -21,8 +21,10 @@ static int _concat_internal(char **dst, const char *src, va_list args){
     /* Back up args before it gets used. Client calls va_end
      * on the parameter themselves when calling vconcat.
      */
-#ifndef __riscos
+#if !defined(__riscos) || defined (__riscos64)
     va_copy(args1, args);
+#else
+    memcpy(args1, args, sizeof(args1));
 #endif
 
     total = srclen + dstlen + vsnprintf(NULL, 0, src, args) + 1;
