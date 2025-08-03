@@ -9,8 +9,9 @@
 #include "source/armadillo.h"
 #include "source/strext.h"
 
-const char *decode_cond(unsigned int cond);
 #endif
+
+const char *decode_cond(unsigned int cond);
 
 static const char *AD_INSTR_TABLE[] = {
     "AD_INSTR_ADC",
@@ -1271,7 +1272,7 @@ static const char *AD_GET_SYSREG_STRING(unsigned int encoding){
         case 0xdf7e: return "PMEVTYPER30_EL0";
         default: return "Implemation Defined System Register"; // XXX S3_<op1>_<Cn>_<Cm>_<op2>
     };
-};
+}
 
 static const char *AD_TYPE_TABLE[] = {
     "AD_OP_REG", "AD_OP_IMM", "AD_OP_SHIFT"
@@ -1366,6 +1367,7 @@ static void disp_operand(struct ad_operand operand){
 }
 
 static void disp_insn(struct ad_insn *insn){
+    int i;
     printf("Disassembled: %s\n", insn->decoded);
 
     if(insn->group == AD_NONE)
@@ -1376,14 +1378,14 @@ static void disp_insn(struct ad_insn *insn){
     printf("\tThis instruction has %d decode fields (from left to right):\n", insn->num_fields);
 
     printf("\t\t");
-    for(int i=0; i<insn->num_fields-1; i++)
+    for(i=0; i<insn->num_fields-1; i++)
         printf("%#x, ", insn->fields[i]);
 
     printf("%#x\n", insn->fields[insn->num_fields - 1]);
 
     printf("\tThis instruction has %d operands (from left to right):\n", insn->num_operands);
 
-    for(int i=0; i<insn->num_operands; i++)
+    for(i=0; i<insn->num_operands; i++)
         disp_operand(insn->operands[i]);
 
     if(insn->cc != AD_NONE){
@@ -1411,7 +1413,11 @@ int main(int argc, char **argv, const char **envp){
     /* sub x5, x4, #0x20 */
     DISASSEMBLE(0xd1008085, 0);
     /* b 0x100007f70 */
+#if 0
     DISASSEMBLE(0x14000010, 0x100007f30);
+#else
+    DISASSEMBLE(0x14000010, 0x7f30); /* Execution address within 32bits */
+#endif
     /* mrs x0, TTBR0_EL1 */
     DISASSEMBLE(0xd5382000, 0);
     /* ushll2 v6.4s, v2.8h, #1 */

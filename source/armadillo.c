@@ -21,14 +21,16 @@ static int _ArmadilloDisassemble(struct instruction *i,
     unsigned op0 = bits(i->opcode, 25, 28);
 
     if(op0 == 0){
+        unsigned op1;
+        unsigned imm16;
         out->group = AD_G_Reserved;
 
-        unsigned op1 = bits(i->opcode, 16, 24);
+        op1 = bits(i->opcode, 16, 24);
 
         if(op1 != 0)
             return 1;
 
-        unsigned imm16 = bits(i->opcode, 0, 15);
+        imm16 = bits(i->opcode, 0, 15);
 
         ADD_FIELD(out, op0);
         ADD_FIELD(out, op1);
@@ -71,6 +73,8 @@ static int _ArmadilloDisassemble(struct instruction *i,
 
 int ArmadilloDisassemble(unsigned int opcode, unsigned long PC,
         struct ad_insn **out){
+    struct instruction *i;
+    int result;
     if(!out || (out && *out))
         return 1;
 
@@ -89,9 +93,9 @@ int ArmadilloDisassemble(unsigned int opcode, unsigned long PC,
 
     (*out)->cc = AD_NONE;
 
-    struct instruction *i = instruction_new(opcode, PC);
+    i = instruction_new(opcode, PC);
 
-    int result = _ArmadilloDisassemble(i, out);
+    result = _ArmadilloDisassemble(i, out);
 
     if(result){
         free(DECODE_STR(*out));
@@ -105,10 +109,11 @@ int ArmadilloDisassemble(unsigned int opcode, unsigned long PC,
 }
 
 int ArmadilloDone(struct ad_insn **_insn){
+    struct ad_insn *insn;
     if(!_insn)
         return 1;
 
-    struct ad_insn *insn = *_insn;
+    insn = *_insn;
 
     free(insn->decoded);
     free(insn->fields);

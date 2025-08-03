@@ -32,6 +32,9 @@ CDEFINES   =
 # Space separated list of libraries to link against, eg C:LibName.o.libLibName
 LIBS       = ${CLIB} C:Armadillo.o.libArmadillo
 
+# We need the C99 functions
+CLIBTYPE = generic
+
 # Objects to build, using the format o.<name> (will be varied for build type)
 OBJS       = o.example \
 
