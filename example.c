@@ -1,8 +1,16 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#ifdef __riscos
+#include "armadillo.h"
+#include "strext.h"
+
+#else
 #include "source/armadillo.h"
 #include "source/strext.h"
+
+const char *decode_cond(unsigned int cond);
+#endif
 
 static const char *AD_INSTR_TABLE[] = {
     "AD_INSTR_ADC",
@@ -1287,28 +1295,6 @@ static const char *AD_COND_TABLE[] = {
     "AD_CC_VS", "AD_CC_VC", "AD_CC_HI", "AD_CC_LS", "AD_CC_GE", "AD_CC_LT",
     "AD_CC_GT", "AD_CC_LE", "AD_CC_AL"
 };
-
-const char *decode_cond(unsigned int cond){
-    switch(cond){
-        case 0: return "eq";
-        case 1: return "ne";
-        case 2: return "cs";
-        case 3: return "cc";
-        case 4: return "mi";
-        case 5: return "pl";
-        case 6: return "vs";
-        case 7: return "vc";
-        case 8: return "hi";
-        case 9: return "ls";
-        case 10: return "ge";
-        case 11: return "lt";
-        case 12: return "gt";
-        case 13: return "le";
-        case 14: return "al";
-        case 15: return "nv";
-        default: return NULL;
-    };
-}
 
 static const char *GET_GEN_REG(const char **rtbl, unsigned int idx,
         int prefer_zr){
