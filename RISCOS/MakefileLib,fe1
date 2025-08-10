@@ -17,6 +17,7 @@ COMPONENT  = Armadillo
 # To export to the library in a subdirectory, use an export like:
 #   ${EXP_LIB}.${COMPONENT}.h.myheader
 EXPORTS    = ${EXP_LIB}.${COMPONENT}.h.armadillo \
+			 ${EXP_LIB}.${COMPONENT}.h.adefs \
 			 ${EXP_LIB}.${COMPONENT}.h.strext \
 
 # Comma-separated list of paths to use for includes, such as:
@@ -44,6 +45,8 @@ include LibExport
 # For any files you export with EXPORTS you may need to include an
 # export rule
 ${EXP_LIB}.${COMPONENT}.h.armadillo: h.armadillo
+       ${CP} $?  $@  ${CPFLAGS}
+${EXP_LIB}.${COMPONENT}.h.adefs: h.adefs
        ${CP} $?  $@  ${CPFLAGS}
 ${EXP_LIB}.${COMPONENT}.h.strext: h.strext
        ${CP} $?  $@  ${CPFLAGS}
