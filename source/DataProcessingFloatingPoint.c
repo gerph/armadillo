@@ -14,7 +14,7 @@ static int DisassembleCryptographicAESInstr(struct instruction *i,
     unsigned opcode = bits(i->opcode, 12, 16);
     unsigned Rn = bits(i->opcode, 5, 9);
     unsigned Rd = bits(i->opcode, 0, 4);
-    struct itab tab[] = {
+    static struct itab tab[] = {
         { "aese", AD_INSTR_AESE }, { "aesd", AD_INSTR_AESD },
         { "aesmc", AD_INSTR_AESMC }, { "aesimc", AD_INSTR_AESIMC }
     };
@@ -64,7 +64,7 @@ static int DisassembleCryptographicThreeRegisterSHAInstr(struct instruction *i,
     unsigned opcode = bits(i->opcode, 12, 14);
     unsigned Rn = bits(i->opcode, 5, 9);
     unsigned Rd = bits(i->opcode, 0, 4);
-    struct itab tab[] = {
+    static struct itab tab[] = {
         { "sha1c", AD_INSTR_SHA1C }, { "sha1p", AD_INSTR_SHA1P },
         { "sha1m", AD_INSTR_SHA1M }, { "sha1su0", AD_INSTR_SHA1SU0 },
         { "sha256h", AD_INSTR_SHA256H }, { "sha256h2", AD_INSTR_SHA256H2 },
@@ -140,7 +140,7 @@ static int DisassembleCryptographicTwoRegisterSHAInstr(struct instruction *i,
     unsigned opcode = bits(i->opcode, 12, 16);
     unsigned Rn = bits(i->opcode, 5, 9);
     unsigned Rd = bits(i->opcode, 0, 4);
-    struct itab tab[] = {
+    static struct itab tab[] = {
         { "sha1h", AD_INSTR_SHA1H }, { "sha1su1", AD_INSTR_SHA1SU1 },
         { "sha256su0", AD_INSTR_SHA256SU0 }
     };
@@ -507,7 +507,7 @@ static int DisassembleAdvancedSIMDThreeSameInstr(struct instruction *i,
         idx = (U << 4) | (a << 3) | opcode;
 
         if(scalar){
-            struct itab tab[] = {
+            static struct itab tab[] = {
                 /* three blanks, idxes [0-2] */
                 { NULL, AD_NONE }, { NULL, AD_NONE }, { NULL, AD_NONE },
                 { "fmulx", AD_INSTR_FMULX }, { "fcmeq", AD_INSTR_FCMEQ },
@@ -545,7 +545,7 @@ static int DisassembleAdvancedSIMDThreeSameInstr(struct instruction *i,
             concat(&DECODE_STR(out), "%s %s, %s, %s", instr_s, Rd_s, Rn_s, Rm_s);
         }
         else{
-            struct itab tab[] = {
+            static struct itab tab[] = {
                 { "fmaxnm", AD_INSTR_FMAXNM }, { "fmla", AD_INSTR_FMLA },
                 { "fadd", AD_INSTR_FADD }, { "fmulx", AD_INSTR_FMULX },
                 { "fcmeq", AD_INSTR_FCMEQ },
@@ -773,12 +773,12 @@ static int DisassembleAdvancedSIMDThreeSameInstr(struct instruction *i,
             sz = _128_BIT;
         }
         else if(opcode == 3){
-            struct itab u0[] = {
+            static struct itab u0[] = {
                 { "and", AD_INSTR_AND }, { "bic", AD_INSTR_BIC },
                 { "orr", AD_INSTR_ORR }, { "orn", AD_INSTR_ORN }
             };
 
-            struct itab u1[] = {
+            static struct itab u1[] = {
                 { "eor", AD_INSTR_EOR }, { "bsl", AD_INSTR_BSL },
                 { "bit", AD_INSTR_BIT }, { "bif", AD_INSTR_BIF }
             };
@@ -1673,7 +1673,7 @@ static int DisassembleAdvancedSIMDTwoRegisterMiscellaneousInstr(struct instructi
         unsigned o0;
         unsigned op;
 
-        struct itab tab[] = {
+        static struct itab tab[] = {
             { "rev64", AD_INSTR_REV64 }, { "rev32", AD_INSTR_REV32 },
             { "rev16", AD_INSTR_REV16 }
         };
@@ -1837,7 +1837,7 @@ static int DisassembleAdvancedSIMDTwoRegisterMiscellaneousInstr(struct instructi
     else if(opcode >= 8 && opcode <= 0xa){
         unsigned op;
         unsigned cop;
-        struct itab tab[] = {
+        static struct itab tab[] = {
             { "cmgt", AD_INSTR_CMGT }, { "cmge", AD_INSTR_CMGE },
             { "cmeq", AD_INSTR_CMEQ }, { "cmle", AD_INSTR_CMLE }
         };
@@ -1915,7 +1915,7 @@ static int DisassembleAdvancedSIMDTwoRegisterMiscellaneousInstr(struct instructi
         unsigned _sz = (size & 1);
         unsigned op;
         unsigned cop;
-        struct itab tab[] = {
+        static struct itab tab[] = {
             { "fcmgt", AD_INSTR_FCMGT }, { "fcmge", AD_INSTR_FCMGE },
             { "fcmeq", AD_INSTR_FCMEQ }, { "fcmle", AD_INSTR_FCMLE }
         };
@@ -2343,7 +2343,7 @@ static int DisassembleAdvancedSIMDTwoRegisterMiscellaneousInstr(struct instructi
 
         if(U == 0){
             if(s == 0){
-                struct itab tab[] = {
+                static struct itab tab[] = {
                     { "fcvtns", AD_INSTR_FCVTNS }, { "fcvtms", AD_INSTR_FCVTMS },
                     { "fcvtas", AD_INSTR_FCVTAS }, { "scvtf", AD_INSTR_SCVTF }
                 };
@@ -2355,7 +2355,7 @@ static int DisassembleAdvancedSIMDTwoRegisterMiscellaneousInstr(struct instructi
                 instr_id = tab[tempop].instr_id;
             }
             else{
-                struct itab tab[] = {
+                static struct itab tab[] = {
                     { "fcvtps", AD_INSTR_FCVTPS }, { "fcvtzs", AD_INSTR_FCVTZS },
                     { "urecpe", AD_INSTR_URECPE }, { "frecpe", AD_INSTR_FRECPE }
                 };
@@ -2369,7 +2369,7 @@ static int DisassembleAdvancedSIMDTwoRegisterMiscellaneousInstr(struct instructi
         }
         else{
             if(s == 0){
-                struct itab tab[] = {
+                static struct itab tab[] = {
                     { "fcvtnu", AD_INSTR_FCVTNU }, { "fcvtmu", AD_INSTR_FCVTMU },
                     { "fcvtau", AD_INSTR_FCVTAU }, { "ucvtf", AD_INSTR_UCVTF }
                 };
@@ -2381,7 +2381,7 @@ static int DisassembleAdvancedSIMDTwoRegisterMiscellaneousInstr(struct instructi
                 instr_id = tab[tempop].instr_id;
             }
             else{
-                struct itab tab[] = {
+                static struct itab tab[] = {
                     { "fcvtpu", AD_INSTR_FCVTPU }, { "fcvtzu", AD_INSTR_FCVTZU },
                     { "ursqrte", AD_INSTR_URSQRTE }, { "frsqrte", AD_INSTR_FRSQRTE }
                 };
@@ -2504,7 +2504,7 @@ static int DisassembleAdvancedSIMDScalarPairwiseInstr(struct instruction *i,
 
         unsigned tempop = opcode - 12;
 
-        struct itab tab[] = {
+        static struct itab tab[] = {
             { NULL, 0 },
             { NULL, 0 },
             /* one blank, idx 2 */
@@ -2603,7 +2603,7 @@ static int DisassembleAdvancedSIMDThreeDifferentInstr(struct instruction *i,
     if(scalar){
         unsigned tempop = opcode - 9;
 
-        struct itab tab[] = {
+        static struct itab tab[] = {
             { "sqdmlal", AD_INSTR_SQDMLAL },
             /* one blank, idx 1 */
             { NULL, AD_NONE },
@@ -2636,7 +2636,7 @@ static int DisassembleAdvancedSIMDThreeDifferentInstr(struct instruction *i,
         Rn_Rm_sz = size == 1 ? _16_BIT : _32_BIT;
     }
     else{
-        struct itab u0_tab[] = {
+        static struct itab u0_tab[] = {
             { NULL, 0 },
             { NULL, 0 },
             { NULL, 0 },
@@ -2654,7 +2654,7 @@ static int DisassembleAdvancedSIMDThreeDifferentInstr(struct instruction *i,
             { NULL, 0 },
         };
 
-        struct itab u1_tab[] = {
+        static struct itab u1_tab[] = {
             { NULL, 0 },
             { NULL, 0 },
             { NULL, 0 },
@@ -3105,7 +3105,7 @@ static int DisassembleAdvancedSIMDShiftByImmediateInstr(struct instruction *i,
     ADD_FIELD(out, Rd);
 
     if(opcode <= 0xe){
-        struct itab tab[] = {
+        static struct itab tab[] = {
             { NULL, 0 },
             /* one blank, idx 1 */
             { NULL, AD_NONE },
@@ -3308,7 +3308,7 @@ static int DisassembleAdvancedSIMDShiftByImmediateInstr(struct instruction *i,
             Rn_sz = sizes[hsb + 1];
         }
         else{
-            struct itab u0_tab[] = {
+            static struct itab u0_tab[] = {
                 { NULL, 0 },
                 { NULL, 0 },
                 { NULL, 0 },
@@ -3316,7 +3316,7 @@ static int DisassembleAdvancedSIMDShiftByImmediateInstr(struct instruction *i,
                 { NULL, 0 },
             };
 
-            struct itab u1_tab[] = {
+            static struct itab u1_tab[] = {
                 { NULL, 0 },
                 { NULL, 0 },
                 { NULL, 0 },
@@ -3964,7 +3964,7 @@ static int DisassembleAdvancedSIMDPermuteInstr(struct instruction *i,
     unsigned Rn = bits(i->opcode, 5, 9);
     unsigned Rd = bits(i->opcode, 0, 4);
 
-    struct itab tab[] = {
+    static struct itab tab[] = {
         /* one blank, idx 0 */
         { NULL, AD_NONE },
         { "uzp1", AD_INSTR_UZP1 }, { "trn1", AD_INSTR_TRN1 },
@@ -4230,7 +4230,7 @@ static int DisassembleCryptographicThreeRegisterImm2Instr(struct instruction *i,
     unsigned opcode = bits(i->opcode, 10, 11);
     unsigned Rn = bits(i->opcode, 5, 9);
     unsigned Rd = bits(i->opcode, 0, 4);
-    struct itab tab[] = {
+    static struct itab tab[] = {
         { "sm3tt1a", AD_INSTR_SM3TT1A }, { "sm3tt1b", AD_INSTR_SM3TT1B },
         { "sm3tt2a", AD_INSTR_SM3TT2A }, { "sm3tt2b", AD_INSTR_SM3TT2B }
     };
@@ -4279,7 +4279,7 @@ static int DisassembleCryptographicThreeRegisterSHA512Instr(struct instruction *
     unsigned Rd = bits(i->opcode, 0, 4);
     unsigned idx;
 
-    struct itab tab[] = {
+    static struct itab tab[] = {
         { "sha512h", AD_INSTR_SHA512H }, { "sha512h2", AD_INSTR_SHA512H2 },
         { "sha512su1", AD_INSTR_SHA512SU1 }, { "rax1", AD_INSTR_RAX1 },
         { "sm3partw1", AD_INSTR_SM3PARTW1 }, { "sm3partw2", AD_INSTR_SM3PARTW2 },
@@ -4793,7 +4793,7 @@ static int DisassembleFloatingPointDataProcessingOneSourceInstr(struct instructi
 
     struct itab *tab = NULL;
 
-    struct itab ptype0_tab[] = {
+    static struct itab ptype0_tab[] = {
         { "fmov", AD_INSTR_FMOV }, { "fabs", AD_INSTR_FABS },
         { "fneg", AD_INSTR_FNEG }, { "fsqrt", AD_INSTR_FSQRT },
         /* one blank, idx 4 */
@@ -4811,7 +4811,7 @@ static int DisassembleFloatingPointDataProcessingOneSourceInstr(struct instructi
         { "frint64z", AD_INSTR_FRINT64Z }, { "frint64x", AD_INSTR_FRINT64X }
     };
 
-    struct itab ptype1_tab[] = {
+    static struct itab ptype1_tab[] = {
         { "fmov", AD_INSTR_FMOV }, { "fabs", AD_INSTR_FABS },
         { "fneg", AD_INSTR_FNEG }, { "fsqrt", AD_INSTR_FSQRT },
         { "fcvt", AD_INSTR_FCVT },
@@ -4828,7 +4828,7 @@ static int DisassembleFloatingPointDataProcessingOneSourceInstr(struct instructi
         { "frint64z", AD_INSTR_FRINT64Z }, { "frint64x", AD_INSTR_FRINT64X }
     };
 
-    struct itab ptype3_tab[] = {
+    static struct itab ptype3_tab[] = {
         { "fmov", AD_INSTR_FMOV }, { "fabs", AD_INSTR_FABS },
         { "fneg", AD_INSTR_FNEG }, { "fsqrt", AD_INSTR_FSQRT },
         { "fcvt", AD_INSTR_FCVT },
@@ -5182,7 +5182,7 @@ static int DisassembleFloatingPointDataProcessingTwoSourceInstr(struct instructi
     unsigned Rn = bits(i->opcode, 5, 9);
     unsigned Rd = bits(i->opcode, 0, 4);
 
-    struct itab tab[] = {
+    static struct itab tab[] = {
         { "fmul", AD_INSTR_FMUL }, { "fdiv", AD_INSTR_FDIV },
         { "fadd", AD_INSTR_FADD }, { "fsub", AD_INSTR_FSUB },
         { "fmax", AD_INSTR_FMAX }, { "fmin", AD_INSTR_FMIN },
@@ -5322,7 +5322,7 @@ static int DisassembleFloatingPointDataProcessingThreeSourceInstr(struct instruc
     unsigned Rn = bits(i->opcode, 5, 9);
     unsigned Rd = bits(i->opcode, 0, 4);
 
-    struct itab tab[] = {
+    static struct itab tab[] = {
         { "fmadd", AD_INSTR_FMADD }, { "fmsub", AD_INSTR_FMSUB },
         { "fnmadd", AD_INSTR_FNMADD }, { "fnmsub", AD_INSTR_FNMSUB }
     };

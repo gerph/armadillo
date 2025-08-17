@@ -23,7 +23,7 @@ static int DisassembleDataProcessingTwoSourceInstr(struct instruction *i,
     unsigned opcode = bits(i->opcode, 10, 15);
     unsigned Rn = bits(i->opcode, 5, 9);
     unsigned Rd = bits(i->opcode, 0, 4);
-    struct itab itab[] = {
+    static struct itab itab[] = {
         { "subp", AD_INSTR_SUBP }, { NULL, AD_NONE }, { "udiv", AD_INSTR_UDIV },
         { "sdiv", AD_INSTR_SDIV }, { "irg", AD_INSTR_IRG }, { "gmi", AD_INSTR_GMI },
         { NULL, AD_NONE }, { NULL, AD_NONE }, { "lslv", AD_INSTR_LSLV },
@@ -175,7 +175,7 @@ static int DisassembleDataProcessingOneSourceInstr(struct instruction *i,
     ADD_FIELD(out, Rd);
 
     if(opcode2 == 0){
-        struct itab tab[] = {
+        static struct itab tab[] = {
             { "rbit", AD_INSTR_RBIT }, { "rev16", AD_INSTR_REV16 },
             { "rev", AD_INSTR_REV }, { "rev32", AD_INSTR_REV32 },
             { "clz", AD_INSTR_CLZ }, { "cls", AD_INSTR_CLS },
@@ -218,7 +218,7 @@ static int DisassembleDataProcessingOneSourceInstr(struct instruction *i,
         concat(&DECODE_STR(out), "%s %s, %s", instr_s, Rd_s, Rn_s);
     }
     else if(opcode2 == 1 && opcode < 8){
-        struct itab tab[] = {
+        static struct itab tab[] = {
             { "pacia", AD_INSTR_PACIA }, { "pacib", AD_INSTR_PACIB },
             { "pacda", AD_INSTR_PACDA }, { "pacdb", AD_INSTR_PACDB },
             { "autia", AD_INSTR_AUTIA }, { "autib", AD_INSTR_AUTIB },
@@ -245,7 +245,7 @@ static int DisassembleDataProcessingOneSourceInstr(struct instruction *i,
         concat(&DECODE_STR(out), "%s %s, %s", instr_s, Rd_s, Rn_s);
     }
     else if(opcode2 == 1 && opcode >= 8 && Rn == 0x1f){
-        struct itab tab[] = {
+        static struct itab tab[] = {
             { "paciza", AD_INSTR_PACIZA }, { "pacizb", AD_INSTR_PACIZB },
             { "pacdza", AD_INSTR_PACDZA }, { "pacdzb", AD_INSTR_PACDZB },
             { "autiza", AD_INSTR_AUTIZA }, { "autizb", AD_INSTR_AUTIZB },
@@ -301,7 +301,7 @@ static int DisassembleLogicalShiftedRegisterInstr(struct instruction *i,
     unsigned Rd = bits(i->opcode, 0, 4);
     const char **registers = sf == 0 ? AD_RTBL_GEN_32 : AD_RTBL_GEN_64;
     int sz = sf == 0 ? _32_BIT : _64_BIT;
-    struct itab tab[] = {
+    static struct itab tab[] = {
         { "and", AD_INSTR_AND }, { "bic", AD_INSTR_BIC }, { "orr", AD_INSTR_ORR },
         { "orn", AD_INSTR_ORN }, { "eor", AD_INSTR_EOR }, { "eon", AD_INSTR_EON },
         { "ands", AD_INSTR_ANDS }, { "bics", AD_INSTR_BICS }
@@ -457,7 +457,7 @@ static int DisassembleAddSubtractShiftedOrExtendedInstr(struct instruction *i,
     unsigned imm6 = (option << 3) | imm3;
     unsigned Rn = bits(i->opcode, 5, 9);
     unsigned Rd = bits(i->opcode, 0, 4);
-    struct itab tab[] = {
+    static struct itab tab[] = {
         { "add", AD_INSTR_ADD }, { "adds", AD_INSTR_ADDS },
         { "sub", AD_INSTR_SUB }, { "subs", AD_INSTR_SUBS }
     };
@@ -635,7 +635,7 @@ static int DisassembleAddSubtractCarryInstr(struct instruction *i,
     unsigned Rd = bits(i->opcode, 0, 4);
     const char **registers;
     int sz;
-    struct itab tab[] = {
+    static struct itab tab[] = {
         { "adc", AD_INSTR_ADC }, { "adcs", AD_INSTR_ADCS },
         { "sbc", AD_INSTR_SBC }, { "sbcs", AD_INSTR_SBCS }
     };
@@ -782,7 +782,7 @@ static int DisassembleConditionalCompareInstr(struct instruction *i,
     unsigned o3 = bits(i->opcode, 4, 4);
     unsigned nzcv = bits(i->opcode, 0, 3);
     unsigned idx;
-    struct itab tab[] = {
+    static struct itab tab[] = {
         { "ccmn", AD_INSTR_CCMN }, { "ccmp", AD_INSTR_CCMP }
     };
     const char *instr_s;
@@ -862,7 +862,7 @@ static int DisassembleConditionalSelectInstr(struct instruction *i,
     unsigned op2 = bits(i->opcode, 10, 11);
     unsigned Rn = bits(i->opcode, 5, 9);
     unsigned Rd = bits(i->opcode, 0, 4);
-    struct itab tab[] = {
+    static struct itab tab[] = {
         { "csel", AD_INSTR_CSEL }, { "csinc", AD_INSTR_CSINC },
         { "csinv", AD_INSTR_CSINV }, { "csneg", AD_INSTR_CSNEG }
     };
@@ -982,7 +982,7 @@ static int DisassembleDataProcessingThreeSourceInstr(struct instruction *i,
         const char **registers = sf == 1 ? AD_RTBL_GEN_64 : AD_RTBL_GEN_32;
         int sz = sf == 1 ? _64_BIT : _32_BIT;
 
-        struct itab tab[] = {
+        static struct itab tab[] = {
             { "madd", AD_INSTR_MADD }, { "msub", AD_INSTR_MSUB }
         };
         const char *Rd_s;

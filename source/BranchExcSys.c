@@ -109,7 +109,7 @@ static int DisassembleHintInstr(struct instruction *i, struct ad_insn *out){
 
     int instr_id = AD_NONE;
 
-    struct itab first[] = {
+    static struct itab first[] = {
         { "nop", AD_INSTR_NOP },
         { "yield", AD_INSTR_YIELD },
         { "wfe", AD_INSTR_WFE },
@@ -120,7 +120,7 @@ static int DisassembleHintInstr(struct instruction *i, struct ad_insn *out){
         { "xpaclri", AD_INSTR_XPACLRI }
     };
 
-    struct itab second[] = {
+    static struct itab second[] = {
         { "pacia1716", AD_INSTR_PACIA1716 },
         { NULL, AD_NONE },
         { "pacib1716", AD_INSTR_PACIB1716 },
@@ -130,14 +130,14 @@ static int DisassembleHintInstr(struct instruction *i, struct ad_insn *out){
         { "autib1716", AD_INSTR_AUTIB1716 }
     };
 
-    struct itab third[] = {
+    static struct itab third[] = {
         { "esb", AD_INSTR_ESB },
         { "psb csync", AD_INSTR_PSB_CSYNC },
         { "tsb csync", AD_INSTR_TSB_CSYNC },
         { "csdb", AD_INSTR_CSDB }
     };
 
-    struct itab fourth[] = {
+    static struct itab fourth[] = {
         { "paciaz", AD_INSTR_PACIAZ },
         { "paciasp", AD_INSTR_PACIASP },
         { "pacibz", AD_INSTR_PACIBZ },

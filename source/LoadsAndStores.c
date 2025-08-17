@@ -700,7 +700,7 @@ static int DisassembleLoadAndStoreExclusiveInstr(struct instruction *i,
          * with halfwords, we increment the instruction ID. Additionally,
          * we'll add the last character to the instruction string later on.
          */
-        struct itab tab[] = {
+        static struct itab tab[] = {
             { "stxr", AD_INSTR_STXRB },
             { "stlxr", AD_INSTR_STLXRB },
             { NULL, AD_NONE },
@@ -756,7 +756,7 @@ static int DisassembleLoadAndStoreExclusiveInstr(struct instruction *i,
         concat(&DECODE_STR(out), "%s, [%s]", Rt_s, Rn_s);
     }
     else if(size == 2 || size == 3){
-        struct itab tab[] = {
+        static struct itab tab[] = {
             { "stxr", AD_INSTR_STXR },
             { "stlxr", AD_INSTR_STLXR },
             { "stxp", AD_INSTR_STXP },
@@ -938,7 +938,7 @@ static int DisassembleLDAPR_STLRInstr(struct instruction *i,
         concat(&DECODE_STR(out), "%s %s", instr_s, Rt_s);
     }
     else if(size == 2){
-        struct itab tab[] = {
+        static struct itab tab[] = {
             { "stlur", AD_INSTR_STLUR },
             { "ldapur", AD_INSTR_LDAPUR },
             { "ldapursw", AD_INSTR_LDAPURSW },
